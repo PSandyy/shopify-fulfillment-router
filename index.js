@@ -36,7 +36,7 @@ app.post('/webhook/order', async (req, res) => {
     body: JSON.stringify({
       order: {
         id: orderId,
-        tags: tag
+        tags: order.tags ? `${order.tags},${tag}` : tag
       }
     })
   });
