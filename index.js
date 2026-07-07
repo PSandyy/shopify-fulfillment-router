@@ -7,25 +7,12 @@ const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
 const SHOPIFY_TOKEN = process.env.SHOPIFY_TOKEN;
 const BOSTA_API_KEY = process.env.BOSTA_API_KEY;
 const SHIPBLU_API_KEY = process.env.SHIPBLU_API_KEY;
-const slot = Math.ceil(counter / 10);
-  const carrier = slot % 2 === 1 ? 'bosta' : 'shipblu';
-
-  if (bostaOnlyCities.some(c => city.includes(c))) {
-    console.log(`Order #${order.order_number} → bosta (Hurghada - forced)`);
-    await sendToBosta(order);
-  } else if (carrier === 'bosta') {
-    console.log(`Order #${order.order_number} → bosta (counter: ${counter})`);
-    await sendToBosta(order);
-  } else {
-    console.log(`Order #${order.order_number} → shipblu (counter: ${counter})`);
-    await sendToShipBlu(order);
-  }
 
 let counter = 0;
 let lastReset = new Date().toDateString();
 
-async function sendToBosta(order) {
-  const res = await fetch('https://app.bosta.co/api/v2/deliveries', {
+function sendToBosta(order) {
+  return fetch('https://app.bosta.co/api/v2/deliveries', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -46,57 +33,61 @@ async function sendToBosta(order) {
       businessReference: String(order.order_number),
       cod: parseFloat(order.total_price) || 0
     })
-  });
-  const data = await res.json();
-  console.log('Bosta response:', JSON.stringify(data));
-  return data;
+  }).then(function(res) { return res.json(); })
+    .then(function(data) { console.log('Bosta response:', JSON.stringify(data)); });
 }
 
-async function sendToShipBlu(order) {
-  const res = await fetch('https://api.shipblu.com/api/v1/merchant/shipments/', {
+function sendToShipBlu(order) {
+  return fetch('https://api.shipblu.com/api/v1/merchant/shipments/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${SHIPBLU_API_KEY}`
+      'Authorization': 'Bearer ' + SHIPBLU_API_KEY
     },
     body: JSON.stringify({
       address: {
         city: order.shipping_address?.city || 'Cairo',
         address: order.shipping_address?.address1 || '',
       },
-      full_name: `${order.shipping_address?.first_name || ''} ${order.shipping_address?.last_name || ''}`,
+      full_name: (order.shipping_address?.first_name || '') + ' ' + (order.shipping_address?.last_name || ''),
       phone: order.shipping_address?.phone || order.phone || '',
       order_reference: String(order.order_number),
       cash_on_delivery: parseFloat(order.total_price) || 0,
       allow_open_package: false
     })
-  });
-  const data = await res.json();
-  console.log('ShipBlu response:', JSON.stringify(data));
-  return data;
+  }).then(function(res) { return res.json(); })
+    .then(function(data) { console.log('ShipBlu response:', JSON.stringify(data)); });
 }
 
-app.post('/webhook/order', async (req, res) => {
+app.post('/webhook/order', function(req, res) {
   res.sendStatus(200);
 
-  const today = new Date().toDateString();
+  var today = new Date().toDateString();
   if (today !== lastReset) {
     counter = 0;
     lastReset = today;
   }
 
   counter++;
-  const order = req.body;
-  console.log(`Order #${order.order_number} → ${counter <= LIMIT ? 'bosta' : 'shipblu'} (counter: ${counter})`);
+  var order = req.body;
+  var city = ((order.shipping_address && order.shipping_address.city) || '').toLowerCase();
+  var bostaOnlyCities = ['hurghada', 'الغردقة', 'red sea', 'al ghardaqah'];
+  var slot = Math.ceil(counter / 10);
+  var carrier = slot % 2 === 1 ? 'bosta' : 'shipblu';
 
-  if (counter <= LIMIT) {
-    await sendToBosta(order);
+  if (bostaOnlyCities.some(function(c) { return city.includes(c); })) {
+    console.log('Order #' + order.order_number + ' → bosta (Hurghada - forced)');
+    sendToBosta(order);
+  } else if (carrier === 'bosta') {
+    console.log('Order #' + order.order_number + ' → bosta (counter: ' + counter + ')');
+    sendToBosta(order);
   } else {
-    await sendToShipBlu(order);
+    console.log('Order #' + order.order_number + ' → shipblu (counter: ' + counter + ')');
+    sendToShipBlu(order);
   }
 });
 
-app.get('/', (req, res) => res.send('Fulfillment Router Running ✅'));
+app.get('/', function(req, res) { res.send('Fulfillment Router Running ✅'); });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+var PORT = process.env.PORT || 3000;
+app.listen(PORT, function() { console.log('Server running on port ' + PORT); });
