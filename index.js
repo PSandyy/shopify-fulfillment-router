@@ -7,7 +7,19 @@ const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
 const SHOPIFY_TOKEN = process.env.SHOPIFY_TOKEN;
 const BOSTA_API_KEY = process.env.BOSTA_API_KEY;
 const SHIPBLU_API_KEY = process.env.SHIPBLU_API_KEY;
-const LIMIT = 30;
+const slot = Math.ceil(counter / 10);
+  const carrier = slot % 2 === 1 ? 'bosta' : 'shipblu';
+
+  if (bostaOnlyCities.some(c => city.includes(c))) {
+    console.log(`Order #${order.order_number} → bosta (Hurghada - forced)`);
+    await sendToBosta(order);
+  } else if (carrier === 'bosta') {
+    console.log(`Order #${order.order_number} → bosta (counter: ${counter})`);
+    await sendToBosta(order);
+  } else {
+    console.log(`Order #${order.order_number} → shipblu (counter: ${counter})`);
+    await sendToShipBlu(order);
+  }
 
 let counter = 0;
 let lastReset = new Date().toDateString();
