@@ -55,10 +55,23 @@ function sendToShipBlu(order) {
       cash_on_delivery: parseFloat(order.total_price) || 0,
       allow_open_package: false
     })
-  }).then(function(res) { return res.json(); })
-    .then(function(data) { console.log('ShipBlu response:', JSON.stringify(data)); });
+  }).then(function(res) {
+    var contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return res.text().then(function(text) {
+        console.log('ShipBlu non-JSON response (status ' + res.status + '):', text.substring(0, 300));
+        return { success: false, nonJson: true, status: res.status };
+      });
+    }
+    return res.json();
+  }).then(function(data) {
+    console.log('ShipBlu response:', JSON.stringify(data));
+    return data;
+  }).catch(function(err) {
+    console.log('ShipBlu request failed:', err.message);
+    return { success: false, error: err.message };
+  });
 }
-
 app.post('/webhook/order', function(req, res) {
   res.sendStatus(200);
 
