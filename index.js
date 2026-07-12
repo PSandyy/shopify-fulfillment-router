@@ -13,6 +13,16 @@ let lastReset = new Date().toDateString();
 let zoneCache = null;
 let zoneCacheTime = null;
 
+function normalizeEgyptPhone(rawPhone) {
+  var digits = (rawPhone || '').replace(/[^0-9+]/g, '');
+  if (digits.startsWith('+20')) return digits;
+  if (digits.startsWith('0020')) return digits;
+  if (digits.startsWith('20') && digits.length === 12) return digits;
+  if (digits.startsWith('01') && digits.length === 11) return digits;
+  if (digits.startsWith('1') && digits.length === 10) return '0' + digits;
+  return digits;
+}
+
 function sendToBosta(order) {
   return fetch('https://app.bosta.co/api/v2/deliveries', {
     method: 'POST',
@@ -130,7 +140,7 @@ async function sendToShipBlu(order) {
       customer: {
         full_name: (order.shipping_address?.first_name || '') + ' ' + (order.shipping_address?.last_name || ''),
         email: order.email || '',
-        phone: order.shipping_address?.phone || order.phone || '',
+        phone: normalizeEgyptPhone(order.shipping_address?.phone || order.phone || ''),
         address: {
           line_1: order.shipping_address?.address1 || '',
           line_2: order.shipping_address?.address2 || '',
