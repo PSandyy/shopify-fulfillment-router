@@ -73,7 +73,7 @@ app.post('/webhook/order', function(req, res) {
   var city = ((order.shipping_address && order.shipping_address.city) || '').toLowerCase();
   var bostaOnlyCities = ['hurghada', 'الغردقة', 'red sea', 'al ghardaqah'];
   var slot = Math.ceil(counter / 10);
-  var carrier = slot % 2 === 1 ? 'bosta' : 'shipblu';
+  var carrier = slot % 2 === 1 ? 'shipblu' : 'bosta';
 
   if (bostaOnlyCities.some(function(c) { return city.includes(c); })) {
     console.log('Order #' + order.order_number + ' → bosta (Hurghada - forced)');
